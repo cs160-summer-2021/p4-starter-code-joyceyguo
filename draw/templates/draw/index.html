@@ -26,8 +26,11 @@
     var tool = new paper.Tool();
     var path = new paper.Path();
     var uid = Date.now() % 10000;
-    path.strokeColor = "red";
-    // path.strokeColor = paper.Color.random();
+
+    // https://css-tricks.com/snippets/javascript/random-hex-color/
+    var randomColor = Math.floor(Math.random()*16777215).toString(16);
+    var color = "#" + randomColor
+    path.strokeColor = color;
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
@@ -39,30 +42,29 @@
         'ws://' + window.location.host + '/ws/draw');
 
     tool.onMouseMove = function(event) { //http://paperjs.org/reference/tool/ path examples
-       path.add(event.point);
-       // You may need to add code here if you want to pass any other information.
-       socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + "}" );
+        // draw on small display only
+        if(url.includes('small')){
+            path.add(event.point);
+            // You may need to add code here if you want to pass any other information.
+            socket.send("{\"x\" : " + event.point.x + ", \"y\" : " + event.point.y + ", \"uid\" : " + uid + ", \"color\" : \"" + color.toString() + "\" }" );
+        }
     }
 
     socket.onmessage = function(receivedMessage) {
         var received = JSON.parse(receivedMessage.data);
         console.log("Received: " + JSON.stringify(received));
-        console.log(received.uid);
-        console.log(uid);
-        // console.log(users);
         // You will probably want to add some code here to draw more lines.
         var newUid = received.uid;
-        var pt = new paper.Point(received.x, received.y);
 
-        if(!(newUid in users)) {
-            users[newUid] = new paper.Path();
-            users[newUid].strokeColor = "purple";
-            
+        // sync drawing on large display only
+        if(url.includes('large')){
+            var pt = new paper.Point(received.x, received.y);
+            if(!(newUid in users)) {
+                users[newUid] = new paper.Path();
+                users[newUid].strokeColor = received.color;
+            }
+            users[newUid].add(pt);
         }
-        users[newUid].add(pt);
-        console.log(users[newUid].strokeColor._canvasStyle);
-        console.log(users[uid].strokeColor._canvasStyle);
-
     }
 
     socket.onclose = function(e) {
